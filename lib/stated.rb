@@ -58,7 +58,7 @@ module Stated
         elsif method_or_proc.is_a?(Symbol)
           return instance_method(method_or_proc).bind(self.new).call
         else
-          raise StandardError.new('when: can only be Symbol or Proc / lambda')
+          raise StandardError.new('when: can only be Symbol or Proc / lambda.')
         end
       end
 
@@ -79,11 +79,11 @@ module Stated
               elsif method.is_a?(Symbol)
                 instance_method(method).bind(self.new).call
               else
-                raise StandardError.new('whan can only be Proc or Sybol')
+                raise StandardError.new('when can only be Proc or Symbol.')
               end
 
         unless can
-          raise TransitionRejected.new('Transition from "%s" rejected by guard' % current_state)
+          raise TransitionRejected.new('Transition from "%s" rejected by guard.' % current_state)
         end
       end
 
