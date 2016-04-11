@@ -74,7 +74,7 @@ puts switch.on? #=> false
 
 This gem depends on [graphviz gem][graphviz]. With method `#save_to` you can save state machine to PNG. Example for [movement_state.rb](spec/movement_state.png).
 
-![Movement state diagram](doc/movement_state.png)
+![Movement state diagram](movement_state.png)
 
 ## Development
 

@@ -8,3 +8,4 @@
 /spec/reports/
 /tmp/
 *.png
+!movement_state.png
