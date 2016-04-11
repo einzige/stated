@@ -2,6 +2,8 @@
 
 State machine for Ruby.
 
+[![Build Status][travis-ci-badge]][travis-ci]
+
 ## Installation
 
 Add this line to your application's Gemfile:
@@ -88,4 +90,6 @@ guard # for continues run
 
 - [Oto Brglez](https://github.com/otobrglez)
 
+[travis-ci-badge]:https://travis-ci.org/otobrglez/stated.svg?branch=master
+[travis-ci]:https://travis-ci.org/otobrglez/stated
 [graphviz]:http://www.rubydoc.info/gems/graphviz 
