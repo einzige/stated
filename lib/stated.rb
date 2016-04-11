@@ -3,8 +3,8 @@ require 'graphviz'
 
 module Stated
   def self.included(base)
-    base.send :extend, ClassMethods
     base.send :include, InstanceMethods
+    base.extend ClassMethods
   end
 
   module ClassMethods
@@ -49,31 +49,61 @@ module Stated
     end
 
     def can_execute?(event_name)
-      !transition_table[[event_name, current_state]].nil?
+      state, method_or_proc = transition_table[[event_name, current_state]]
+      return false if state.nil?
+
+      unless method_or_proc.nil?
+        if method_or_proc.is_a?(Proc)
+          return method_or_proc.call current_state
+        elsif method_or_proc.is_a?(Symbol)
+          return instance_method(method_or_proc).bind(self.new).call
+        else
+          raise StandardError.new('when: can only be Symbol or Proc / lambda')
+        end
+      end
+
+      true
     end
 
     def execute_event!(event_name)
       execute_callbacks :event, :before, event_name
 
-      new_state = transition_table[[event_name, current_state]]
+      new_state, method = transition_table[[event_name, current_state]]
       if new_state.nil?
-        raise TransitionNotPossible.new('Transition from %s is not possible.' % current_state)
+        raise TransitionNotPossible.new('Transition from "%s" is not possible.' % current_state)
+      end
+
+      unless method.nil?
+        can = if method.is_a?(Proc)
+                method.call new_state
+              elsif method.is_a?(Symbol)
+                instance_method(method).bind(self.new).call
+              else
+                raise StandardError.new('whan can only be Proc or Sybol')
+              end
+
+        unless can
+          raise TransitionRejected.new('Transition from "%s" rejected by guard' % current_state)
+        end
       end
 
       old_state = self.current_state
-      self.execute_callbacks :state, :before, new_state, [old_state, new_state]
       self.current_state = new_state
-      self.execute_callbacks :transition, :all, [old_state, new_state]
-      self.execute_callbacks :state, :after, new_state, [old_state, new_state]
 
+      execute_callbacks :state, :before, new_state, [old_state, new_state]
+      execute_callbacks :state, :after, new_state, [old_state, new_state]
       execute_callbacks :event, :after, event_name
+      execute_callbacks :transition, :all, [old_state, new_state]
+
+      self.current_state
     end
 
     def transitions(definition=Hash.new)
+      to = [definition[:to], definition[:when]]
       if definition[:from].is_a? Array
-        definition[:from].map { |from| [from, definition[:to]] }
+        definition[:from].map { |from| [from, to] }
       else
-        [[definition[:from], definition[:to]]]
+        [[definition[:from], to]]
       end
     end
 
@@ -93,7 +123,7 @@ module Stated
       end
     end
 
-    %i{before around after}.each do |callback_name|
+    %i{before after}.each do |callback_name|
       %i{event state}.each do |callback_type|
         name = callback_type == :state ? callback_name : "#{callback_name}_#{callback_type}"
         define_method name.to_sym do |event_name, &block|
@@ -107,10 +137,12 @@ module Stated
     TransitionNotPossible = Class.new(StandardError)
     OnlyOneInitialState = Class.new(StandardError)
     MissingFromOrTo = Class.new(StandardError)
+    TransitionRejected = Class.new(StandardError)
 
     private
 
-    def valid_transition(from, to)
+    def valid_transition(from, to_arr)
+      to = to_arr.first
       raise MissingFromOrTo.new('Missing from: or to: in your definition.') if from.nil? or to.nil?
       raise UndefinedState.new('State %s is not defined.' % to) unless self.states.include?(to)
       raise UndefinedState.new('State %s is not defined.' % from) unless self.states.include?(from)
@@ -132,14 +164,12 @@ module Stated
     end
 
     def save_to(path)
-      # binding.pry
-
       g = Graphviz::Graph.new
       nodes = Hash[self.class.states.map do |s|
         [s, g.add_node(s, node_attributes(s))]
       end]
 
-      table.each do |(label, from), to|
+      table.each do |(label, from), (to, guard)|
         Graphviz::Edge.new g, nodes[from], nodes[to], label: label
       end
 
@@ -150,9 +180,9 @@ module Stated
 
     def node_attributes(state)
       if state == self.class.initial_state
-        {fillcolor:'green', style:'filled'}
+        {fillcolor: 'green', style: 'filled'}
       else
-        {fillcolor:'lightgrey', style:'filled'}
+        {fillcolor: 'lightgrey', style: 'filled'}
       end
     end
   end

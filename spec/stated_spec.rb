@@ -65,7 +65,7 @@ RSpec.describe Stated do
     }
   end
 
-  context 'callbacks', focus: true do
+  context 'callbacks and more magic' do
     subject do
       Class.new do
         include Stated
@@ -74,14 +74,11 @@ RSpec.describe Stated do
         state :blinking
 
         event :turn_on do
-          transitions from: [:off], to: :on, when: ->() {
-            puts "when"
-            false
-          }
+          transitions from: [:off], to: :on, when: ->(state) { true }
         end
 
         event :turn_off do
-          transitions from: [:on, :blinking], to: :off, when: :can_turn_off
+          transitions from: [:on, :blinking], to: :off, when: :turn_off_guard
         end
 
         event :start_blinking do
@@ -108,12 +105,11 @@ RSpec.describe Stated do
           puts "lights were switched off"
         end
 
-        on_transition [:on, :off] do
-          puts "on -> off has occured"
+        on_transition [:on, :off] do |e|
+          puts "on_transition #{e}"
         end
 
-        def can_turn_off
-          puts "can_turn_off?"
+        def turn_off_guard
           true
         end
       end.new(:off)
@@ -121,7 +117,7 @@ RSpec.describe Stated do
 
     it { expect(subject).to be_off }
     it { expect(subject.can_turn_on?).to be true }
-    it { expect(subject.can_turn_off?).to be false }
+    it { expect(subject.can_turn_off?).to be !true }
     it { expect(subject.class.callbacks).not_to be_empty }
 
     it {
