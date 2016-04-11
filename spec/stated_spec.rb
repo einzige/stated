@@ -65,30 +65,42 @@ RSpec.describe Stated do
     }
   end
 
-  context 'callbacks' do
+  context 'callbacks', focus: true do
     subject do
       Class.new do
         include Stated
         state :on, initial: true
         state :off
+        state :blinking
 
         event :turn_on do
-          transitions from: [:off], to: :on
+          transitions from: [:off], to: :on, when: ->() {
+            puts "when"
+            false
+          }
         end
 
         event :turn_off do
-          transitions from: [:on], to: :off
+          transitions from: [:on, :blinking], to: :off, when: :can_turn_off
         end
 
-        before_state :on do |e|
+        event :start_blinking do
+          transitions from: [:on], to: :blinking
+        end
+
+        event :stop_blinking do
+          transitions from: [:blinking], to: :on
+        end
+
+        before :on do |e|
           puts "callback before on #{e}"
         end
 
-        after_state :on do |e|
+        after :on do |e|
           puts "callback after on #{e}"
         end
 
-        before_state :off do |e|
+        before :off do |e|
           puts "callback before off #{e}"
         end
 
@@ -99,14 +111,22 @@ RSpec.describe Stated do
         on_transition [:on, :off] do
           puts "on -> off has occured"
         end
+
+        def can_turn_off
+          puts "can_turn_off?"
+          true
+        end
       end.new(:off)
     end
 
     it { expect(subject).to be_off }
     it { expect(subject.can_turn_on?).to be true }
     it { expect(subject.can_turn_off?).to be false }
+    it { expect(subject.class.callbacks).not_to be_empty }
 
     it {
+      expect(subject.class).to receive(:execute_callbacks).with(any_args).exactly(10)
+
       expect {
         subject.turn_on!
       }.to change(subject, :state).to(:on)
@@ -117,7 +137,7 @@ RSpec.describe Stated do
     }
 
     it {
-      pp subject.class.callbacks
+      expect(subject.save_to("stated_spec_ligh.png")).to be_nil
     }
   end
 end

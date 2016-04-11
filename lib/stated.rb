@@ -1,4 +1,5 @@
 require 'stated/version'
+require 'graphviz'
 
 module Stated
   def self.included(base)
@@ -52,7 +53,7 @@ module Stated
     end
 
     def execute_event!(event_name)
-      execute_callbacks(:event, :before, event_name)
+      execute_callbacks :event, :before, event_name
 
       new_state = transition_table[[event_name, current_state]]
       if new_state.nil?
@@ -60,16 +61,16 @@ module Stated
       end
 
       old_state = self.current_state
-      self.execute_callbacks(:state, :before, new_state, [old_state, new_state])
+      self.execute_callbacks :state, :before, new_state, [old_state, new_state]
       self.current_state = new_state
-      self.execute_callbacks(:transition, :all, [old_state, new_state])
-      self.execute_callbacks(:state, :after, new_state, [old_state, new_state])
+      self.execute_callbacks :transition, :all, [old_state, new_state]
+      self.execute_callbacks :state, :after, new_state, [old_state, new_state]
 
-      execute_callbacks(:event, :after, event_name)
+      execute_callbacks :event, :after, event_name
     end
 
     def transitions(definition=Hash.new)
-      if definition[:from].is_a?(Array)
+      if definition[:from].is_a? Array
         definition[:from].map { |from| [from, definition[:to]] }
       else
         [[definition[:from], definition[:to]]]
@@ -77,7 +78,7 @@ module Stated
     end
 
     def on_transition(events, &block)
-      define_callback(:transition, :all, events, &block)
+      define_callback :transition, :all, events, &block
     end
 
     def define_callback(callback_type, callback_name, event_name, &block)
@@ -87,15 +88,15 @@ module Stated
     end
 
     def execute_callbacks(callback_type, callback_name, event_name, value=nil)
-      value ||= event_name
       (((self.callbacks || {})[[callback_type, callback_name, event_name]]) || []).each do |callback|
-        callback.call value
+        callback.call value || event_name
       end
     end
 
     %i{before around after}.each do |callback_name|
       %i{event state}.each do |callback_type|
-        define_method "#{callback_name}_#{callback_type}".to_sym do |event_name, &block|
+        name = callback_type == :state ? callback_name : "#{callback_name}_#{callback_type}"
+        define_method name.to_sym do |event_name, &block|
           define_callback callback_type, callback_name, event_name, &block
         end
       end
@@ -128,6 +129,31 @@ module Stated
 
     def table
       self.class.transition_table
+    end
+
+    def save_to(path)
+      # binding.pry
+
+      g = Graphviz::Graph.new
+      nodes = Hash[self.class.states.map do |s|
+        [s, g.add_node(s, node_attributes(s))]
+      end]
+
+      table.each do |(label, from), to|
+        Graphviz::Edge.new g, nodes[from], nodes[to], label: label
+      end
+
+      Graphviz::output(g, path: path)
+    end
+
+    private
+
+    def node_attributes(state)
+      if state == self.class.initial_state
+        {fillcolor:'green', style:'filled'}
+      else
+        {fillcolor:'lightgrey', style:'filled'}
+      end
     end
   end
 end

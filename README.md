@@ -34,17 +34,47 @@ class LightSwitch
   end
 
   event :turn_off do
-    transitions from: :on, to: :off
+    transitions from: :on, to: :off, when: :can_turn_off
+  end
+  
+  before :off do |e|
+    puts "Turning lights off. #{e}"
+  end
+  
+  after :off do |e|
+    puts "Lights are now off. #{e}"
+  end
+  
+  before_event :turn_off do |e|
+    puts "Getting ready to turn off."
+  end
+  
+  on_transition [:off, :on] do
+    puts "Lights changed from off to on"
+  end
+  
+  def can_turn_off
+    puts "Can turn off?"
+    true
   end
 end
+
 
 switch = LightSwitch.new
 if switch.can_turn_on?
   switch.turn_on!
 end
 
-puts switch.on? #=> true
+switch.turn_on! #=> Exception,...
+
+switch.turn_off!
+
+puts switch.on? #=> false
 ```
+
+This gem depends on [graphviz gem][graphviz]. With method `#save_to` you can save state machine to PNG. Example for [movement_state.rb](spec/movement_state.png).
+
+![Movement state diagram](doc/movement_state.png)
 
 ## Development
 
@@ -58,3 +88,4 @@ guard # for continues run
 
 - [Oto Brglez](https://github.com/otobrglez)
 
+[graphviz]:http://www.rubydoc.info/gems/graphviz 
