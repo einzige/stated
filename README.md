@@ -9,9 +9,9 @@ State machine for Ruby.
 Add this line to your application's Gemfile:
 
 ```ruby
-gem 'stated'
-
 gem 'stated', github:'otobrglez/stated' # for master
+
+gem 'stated' # once this gets released. ;)
 ```
 
 And then execute:
