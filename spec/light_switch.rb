@@ -1,0 +1,2 @@
+class LightSwitch
+end
