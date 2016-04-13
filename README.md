@@ -72,6 +72,10 @@ switch.turn_on! #=> Exception,...
 switch.turn_off!
 
 puts switch.on? #=> false
+
+# Possible states from current state
+switch.posible_states #=> [:on]
+
 ```
 
 This gem depends on [graphviz gem][graphviz]. With method `#save_to` you can save state machine to PNG. Example for [movement_state.rb](spec/movement_state.png).

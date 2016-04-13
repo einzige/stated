@@ -2,70 +2,76 @@ require 'spec_helper'
 require 'pp'
 
 RSpec.describe Stated do
+  let(:classWithStated) { Class.new { include Stated } }
 
-  context 'initial state validation' do
-    it {
-      expect {
-        Class.new do
-          include Stated
-          state :created, initial: true
-          state :running, initial: true
-        end
-      }.to raise_error /only one/i
-    }
-  end
-
-  context 'transition definition validation' do
-    it {
-      expect {
-        Class.new do
-          include Stated
-          state :on
-          state :off, initial: true
-          event :turn_on do
-            transitions
-          end
-        end
-      }.to raise_error /missing from/i
-    }
-
-    it {
-      expect {
-        Class.new do
-          include Stated
-          state :on
-          state :off, initial: true
-          event :turn_on do
-            transitions from: [:x], to: :y
-          end
-        end
-      }.to raise_error /not defined/i
-    }
-  end
-
-  context 'transitions exceptions' do
-    subject do
-      Class.new do
-        include Stated
-        state :on
-        state :off, initial: true
-
-        event :turn_on do
-          transitions from: :off, to: :on
-        end
-      end.new
+  context 'basics' do
+    context 'instance' do
+      it { expect(classWithStated.new).to respond_to :state }
+      it { expect { classWithStated.new(:test) }.to raise_exception(Stated::UndefinedState) }
+      it { expect(classWithStated.tap { |klass| klass.state :one }.new(:one).state).to eq :one }
     end
 
-    before { subject.turn_on! }
+    context 'class' do
+      it { expect(classWithStated).to respond_to :states, :transition_table, :initial_state, :current_state, :callbacks }
 
-    it {
-      expect {
-        subject.turn_on!
-      }.to raise_exception /not possible/
-    }
+      context '#state' do
+        it { expect(classWithStated).to respond_to :state }
+        it 'can have only one initial state' do
+          expect {
+            classWithStated.tap { |k|
+              k.state :a, initial: true
+              k.state :b, initial: true
+            }
+          }.to raise_exception(Stated::OnlyOneInitialState)
+        end
+
+        it { expect(classWithStated.tap { |k| k.state :a }.new).to respond_to :a? }
+      end
+
+      context '#event' do
+        it {
+          (expect(classWithStated.tap { |k|
+            k.state :hello
+            k.event :say_hi
+          }.new(:hello))).to respond_to :say_hi!, :can_say_hi?
+        }
+      end
+
+      context 'definitions' do
+        it 'missing' do
+          expect { classWithStated.tap { |k|
+            k.state :hello
+            k.event :say_hi do
+              k.transitions
+            end
+          } }.to raise_exception(Stated::MissingFromOrTo)
+        end
+
+        it 'undefined state' do
+          expect { classWithStated.tap { |k|
+            k.state :hello
+            k.event :say_hi do
+              k.transitions from: [:x], to: :y
+            end
+          } }.to raise_exception(Stated::UndefinedState)
+        end
+
+        it 'impossible transitions' do
+          expect { classWithStated.tap { |k|
+            k.state :on
+            k.state :off, initial: true
+            k.event :turn_on do
+              k.transitions from: :off, to: :on
+            end
+          }.new(:on).turn_on! }.to raise_exception(Stated::TransitionNotPossible)
+
+        end
+
+      end
+    end
   end
 
-  context 'callbacks and more magic' do
+  context 'callbacks' do
     subject do
       Class.new do
         include Stated
@@ -132,8 +138,6 @@ RSpec.describe Stated do
       }.to change(subject, :state).to(:off)
     }
 
-    it {
-      expect(subject.save_to("stated_spec_ligh.png")).to be_nil
-    }
+    it { expect(subject.save_to("stated_spec_ligh.png")).to be_nil }
   end
 end

@@ -2,32 +2,40 @@ require 'spec_helper'
 require 'light_switch'
 
 RSpec.describe LightSwitch do
-  let(:described_class) { LightSwitch }
+  it 'acts as regular switch with blinking' do
+    expect(subject).to be_off
+    expect(subject.possible_events).to match_array %i{turn_on}
 
-  context "definition" do
-    it { expect(described_class).to respond_to :state, :event, :transitions }
-    it { expect(described_class.new).to respond_to :state }
-  end
+    expect {
+      subject.turn_off!
+    }.to raise_exception Stated::TransitionNotPossible
 
-  context "#initial_state" do
-    subject { described_class.new }
+    expect(subject.can_turn_on?).to be true
 
-    it "can turn the switch on" do
-      if subject.can_turn_on?
-        subject.turn_on!
-      end
-
-      if subject.can_start_blinking?
-        subject.start_blinking!
-      end
-
-      if subject.blinking?
-        subject.stop_blinking!
-      end
-
-      expect(subject).to be_off
-      expect(subject.state).to eq :off
+    if subject.can_turn_on?
+      subject.turn_on!
     end
+
+    expect(subject).to be_on
+    expect(subject.can_start_blinking?).to be true
+    expect(subject.possible_states).to match_array [:off, :blinking]
+
+    if subject.can_start_blinking?
+      subject.start_blinking!
+    end
+
+    expect(subject).to be_blinking
+
+    if subject.blinking?
+      subject.stop_blinking!
+    end
+
+    expect(subject).to be_off
+    expect(subject.state).to eq :off
+
+    expect(subject.possible_states).to match_array %i{on}
+
+    subject.save_to('light_switch.png')
   end
 end
 

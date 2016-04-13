@@ -2,7 +2,6 @@ require 'spec_helper'
 require 'movement_state'
 
 RSpec.describe MovementState do
-
   subject { described_class.new(:standing) }
 
   context 'walking' do
