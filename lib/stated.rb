@@ -3,8 +3,56 @@ require 'graphviz'
 
 module Stated
   def self.included(base)
-    base.send :include, InstanceMethods
     base.extend ClassMethods
+  end
+
+  # Initializes new state machine with some state
+  def initialize(state=nil)
+    if !state.nil? and !self.class.states.include?(state)
+      raise UndefinedState.new('State %s is not defined.' % state)
+    end
+
+    self.class.current_state = state unless state.nil?
+  end
+
+  def state
+    self.class.current_state
+  end
+
+  def possible_states
+    self.class.possible_states
+  end
+
+  def possible_events
+    self.class.possible_events
+  end
+
+  def table
+    self.class.transition_table
+  end
+
+  # Saves state machine to file. Types PNG or PDF.
+  def save_to(path)
+    g = Graphviz::Graph.new
+    nodes = Hash[self.class.states.map do |s|
+      [s, g.add_node(s, node_attributes(s))]
+    end]
+
+    table.each do |(label, from), (to, guard)|
+      Graphviz::Edge.new g, nodes[from], nodes[to], label: label
+    end
+
+    Graphviz::output(g, path: path)
+  end
+
+  private
+
+  def node_attributes(state)
+    if state == self.class.initial_state
+      {fillcolor: 'green', style: 'filled'}
+    else
+      {fillcolor: 'lightgrey', style: 'filled'}
+    end
   end
 
   module ClassMethods
@@ -161,58 +209,6 @@ module Stated
 
     def possible_events
       select_states.map { |(event, _), (_, _)| event }
-    end
-  end
-
-  module InstanceMethods
-
-    # Initializes new state machine with some state
-    def initialize(state=nil)
-      if !state.nil? and !self.class.states.include?(state)
-        raise UndefinedState.new('State %s is not defined.' % state)
-      end
-
-      self.class.current_state = state unless state.nil?
-    end
-
-    def state
-      self.class.current_state
-    end
-
-    def possible_states
-      self.class.possible_states
-    end
-
-    def possible_events
-      self.class.possible_events
-    end
-
-    def table
-      self.class.transition_table
-    end
-
-    # Saves state machine to file. Types PNG or PDF.
-    def save_to(path)
-      g = Graphviz::Graph.new
-      nodes = Hash[self.class.states.map do |s|
-        [s, g.add_node(s, node_attributes(s))]
-      end]
-
-      table.each do |(label, from), (to, guard)|
-        Graphviz::Edge.new g, nodes[from], nodes[to], label: label
-      end
-
-      Graphviz::output(g, path: path)
-    end
-
-    private
-
-    def node_attributes(state)
-      if state == self.class.initial_state
-        {fillcolor: 'green', style: 'filled'}
-      else
-        {fillcolor: 'lightgrey', style: 'filled'}
-      end
     end
   end
 
