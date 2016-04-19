@@ -2,6 +2,24 @@ require 'stated/version'
 require 'graphviz'
 
 module Stated
+  class StateError < StandardError
+  end
+
+  class UndefinedState < StateError
+  end
+
+  class TransitionNotPossible < StateError
+  end
+
+  class OnlyOneInitialState < StateError
+  end
+
+  class MissingFromOrTo < StateError
+  end
+
+  class TransitionRejected < StateError
+  end
+
   def self.included(base)
     base.extend ClassMethods
   end
@@ -211,12 +229,5 @@ module Stated
       select_states.map { |(event, _), (_, _)| event }
     end
   end
-
-  # Exceptions
-  UndefinedState = Class.new(StandardError)
-  TransitionNotPossible = Class.new(StandardError)
-  OnlyOneInitialState = Class.new(StandardError)
-  MissingFromOrTo = Class.new(StandardError)
-  TransitionRejected = Class.new(StandardError)
 end
 
