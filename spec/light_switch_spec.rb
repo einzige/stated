@@ -2,6 +2,29 @@ require 'spec_helper'
 require 'light_switch'
 
 RSpec.describe LightSwitch do
+  context 'two instances' do
+    let(:instance_1) { LightSwitch.new }
+    let(:instance_2) { LightSwitch.new }
+
+    it 'does not allow instance_2 to start blinking' do
+      expect {
+        instance_2.start_blinking!
+      }.to raise_exception Stated::TransitionNotPossible
+    end
+
+    context 'instance_1 turned on' do
+      before do
+        instance_1.turn_on!
+      end
+
+      it 'still does not allow instance_2 to start blinging' do
+        expect {
+          instance_2.start_blinking!
+        }.to raise_exception Stated::TransitionNotPossible
+      end
+    end
+  end
+
   it 'acts as regular switch with blinking' do
     expect(subject).to be_off
     expect(subject.possible_events).to match_array %i{turn_on}
