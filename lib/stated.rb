@@ -50,6 +50,7 @@ module Stated
   end
 
   # Saves state machine to file. Types PNG or PDF.
+  # TODO: rename to something less generic?
   def save_to(path)
     g = Graphviz::Graph.new
     nodes = Hash[self.class.states.map do |s|
