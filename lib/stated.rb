@@ -26,8 +26,8 @@ module Stated
 
   # Initializes new state machine with some state
   def initialize(state=nil)
-    if !state.nil? and !self.class.states.include?(state)
-      raise UndefinedState.new('State %s is not defined.' % state)
+    if state && !self.class.states.include?(state)
+      fail UndefinedState.new('State %s is not defined.' % state)
     end
 
     self.class.current_state = state unless state.nil?
